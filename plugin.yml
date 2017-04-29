@@ -1,0 +1,11 @@
+name: DeathRespawn
+version: 1.0
+author: Explorer
+main: death.respawn.delay.Main
+depends: [Vault]
+
+commands:
+  deathrespawn:
+    description: Show display help
+    usage: /<command>
+    aliases: [dr]
