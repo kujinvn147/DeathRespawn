@@ -1,4 +1,4 @@
-package death.respawn.delay;
+package com.deathrespawn.explorer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -18,19 +18,15 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 import net.md_5.bungee.api.ChatColor;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 
 public class Main extends JavaPlugin implements Listener {
-
 	public static Plugin plugin;
 	private static Economy econ = null;
 	public static EconomyResponse r;
-
 	String cslprefix = "[DeathRespawn] ";
 
 	public static Plugin getPlugin() {
@@ -38,7 +34,6 @@ public class Main extends JavaPlugin implements Listener {
 	}
 
 	public void loadingConfiguration() {
-
 		String prefix = "prefix";
 		plugin.getConfig().addDefault(prefix, "&7[&cDeathRespawn&7] &r> ");
 
@@ -47,6 +42,8 @@ public class Main extends JavaPlugin implements Listener {
 
 		String bl = "take-money";
 		plugin.getConfig().addDefault(bl, Boolean.valueOf(true));
+		String money = "money-will-take";
+		plugin.getConfig().addDefault(money, Double.valueOf(10000));
 
 		String sound = "sound.death-sound";
 		plugin.getConfig().addDefault(sound, "ENTITY_VILLAGER_HURT");
@@ -82,38 +79,34 @@ public class Main extends JavaPlugin implements Listener {
 		String title4 = "title.0-second";
 		plugin.getConfig().addDefault(title4, "&a&lHỒI SINH SAU &c&l0");
 		String title5 = "title.time-out";
-		plugin.getConfig().addDefault(title5, "&5&lHẾT GIỜ");
+		plugin.getConfig().addDefault(title5, "&e&lHẾT GIỜ");
 
 		getConfig().options().copyDefaults(true);
 		saveDefaultConfig();
-
 	}
 
 	PluginDescriptionFile pdf = getDescription();
 
-	@Override
 	public void onEnable() {
-
-		ConsoleCommandSender console = Bukkit.getConsoleSender();
-
-		if (!setupEconomy()) {
-			console.sendMessage(
-					cslprefix + ChatColor.RED + "Khong tim thay Vault! Vui long cai dat Vault de chay plugin!");
-			getServer().getPluginManager().disablePlugin(this);
-			return;
-		} else {
+		ConsoleCommandSender console = getServer().getConsoleSender();
+		if (setupEconomy()) {
 			plugin = this;
-
-			loadingConfiguration();
+			getServer().getPluginManager().enablePlugin(this);
+			console.sendMessage(this.cslprefix + ChatColor.GOLD
+					+ "Da tim thay Economy! Plugin se duoc khoi chay trong vai giay nua!!");
 			getServer().getPluginManager().registerEvents(this, this);
-
-			console.sendMessage(cslprefix + ChatColor.GREEN + "Plugin da duoc bat!");
-			console.sendMessage(cslprefix + ChatColor.DARK_PURPLE + "Made by " + ChatColor.AQUA + "Explorer");
-			console.sendMessage(cslprefix + ChatColor.DARK_PURPLE + "Version " + ChatColor.RESET + pdf.getVersion());
-			console.sendMessage(cslprefix + ChatColor.DARK_PURPLE + "Donate " + ChatColor.AQUA
-					+ "fb.com/taocuoivichungmaycureporttao");
+			loadingConfiguration();
+			console.sendMessage(this.cslprefix + ChatColor.GREEN + "Plugin da duoc bat!");
+			console.sendMessage(
+					this.cslprefix + ChatColor.DARK_PURPLE + "Made by " + ChatColor.AQUA + pdf.getAuthors());
+			console.sendMessage(
+					this.cslprefix + ChatColor.DARK_PURPLE + "Version " + ChatColor.RESET + this.pdf.getVersion());
+			console.sendMessage(this.cslprefix + ChatColor.DARK_PURPLE + "Donate " + ChatColor.AQUA + pdf.getWebsite());
+		} else if (!setupEconomy()) {
+			console.sendMessage(this.cslprefix + ChatColor.RED
+					+ "Khong tim thay Economy! Hay chac chan rang Essential da duoc cai dat de setup voi Vault moi co the khoi chay plugin!");
+			getServer().getPluginManager().disablePlugin(this);
 		}
-
 	}
 
 	private boolean setupEconomy() {
@@ -124,187 +117,180 @@ public class Main extends JavaPlugin implements Listener {
 		if (rsp == null) {
 			return false;
 		}
-		econ = rsp.getProvider();
+		econ = (Economy) rsp.getProvider();
 		return econ != null;
 	}
 
-	@Override
 	public void onDisable() {
 	}
 
+	@SuppressWarnings("deprecation")
 	@EventHandler
-	public void onDeath(final PlayerDeathEvent e) {
-		final Player p = e.getEntity();
-		Location loc = p.getLocation();
-
-		if (p.isDead()) {
-
-			p.setHealth(20.0D);
-			p.setGameMode(GameMode.SPECTATOR);
-			p.setAllowFlight(true);
-			p.setFoodLevel(20);
+	public void onDeath(PlayerDeathEvent e) {
+		if (e.getEntity() instanceof Player) {
+			final Player p = e.getEntity();
+			final Location loc = p.getLocation();
 
 			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 				public void run() {
 					if (p.isOnline()) {
 						p.spigot().respawn();
+						p.setHealth(p.getMaxHealth());
+						p.setFoodLevel(20);
 					}
 				}
 			}, 0L);
 
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+			if (!(p.hasPermission("dr.respawn"))) {
+				p.setGameMode(GameMode.SPECTATOR);
+				p.setAllowFlight(true);
 
-				public void run() {
-					loc.getWorld().playSound(loc, Sound.valueOf(getConfig().getString("sound.death-sound")), 4F, 1F);
-					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
-							+ ChatColor.translateAlternateColorCodes('&', getConfig().getString("msg.death-event")));
-				}
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.playSound(loc, Sound.valueOf(Main.this.getConfig().getString("sound.death-sound")), 4.0F,
+								1.0F);
+						p.sendMessage(
+								ChatColor.translateAlternateColorCodes('&', Main.this.getConfig().getString("prefix"))
+										+ ChatColor.translateAlternateColorCodes('&',
+												Main.this.getConfig().getString("msg.death-event")));
+					}
+				}, 40L);
 
-			}, 40L);
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.playSound(loc, Sound.valueOf(Main.this.getConfig().getString("sound.counting-down")), 4.0F,
+								1.0F);
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&',
+								Main.this.getConfig().getString("msg.3-second")));
+						Titles.sendTitle(p,
+								ChatColor.translateAlternateColorCodes('&',
+										Main.this.getConfig().getString("title.3-second")),
+								"", Integer.valueOf(0), Integer.valueOf(20), Integer.valueOf(0));
+					}
+				}, 60L);
 
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.playSound(loc, Sound.valueOf(Main.this.getConfig().getString("sound.counting-down")), 4.0F,
+								1.0F);
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&',
+								Main.this.getConfig().getString("msg.2-second")));
+						Titles.sendTitle(p,
+								ChatColor.translateAlternateColorCodes('&',
+										Main.this.getConfig().getString("title.2-second")),
+								"", Integer.valueOf(0), Integer.valueOf(20), Integer.valueOf(0));
+					}
+				}, 80L);
 
-				public void run() {
-					loc.getWorld().playSound(loc, Sound.valueOf(getConfig().getString("sound.counting-down")), 4F, 1F);
-					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("msg.3-second")));
-					Titles.sendTitle(p,
-							ChatColor.translateAlternateColorCodes('&', getConfig().getString("title.3-second")), "", 0,
-							20, 0);
-				}
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.playSound(loc, Sound.valueOf(Main.this.getConfig().getString("sound.counting-down")), 4.0F,
+								1.0F);
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&',
+								Main.this.getConfig().getString("msg.1-second")));
+						Titles.sendTitle(p,
+								ChatColor.translateAlternateColorCodes('&',
+										Main.this.getConfig().getString("title.1-second")),
+								"", Integer.valueOf(0), Integer.valueOf(20), Integer.valueOf(0));
+					}
+				}, 100L);
 
-			}, 60L);
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.playSound(loc, Sound.valueOf(Main.this.getConfig().getString("sound.counting-down")), 4.0F,
+								1.0F);
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&',
+								Main.this.getConfig().getString("msg.time-out")));
+						Titles.sendTitle(p,
+								ChatColor.translateAlternateColorCodes('&',
+										Main.this.getConfig().getString("title.0-second")),
+								"", Integer.valueOf(0), Integer.valueOf(20), Integer.valueOf(0));
+					}
+				}, 120L);
 
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.playSound(loc, Sound.valueOf(Main.this.getConfig().getString("sound.time-out")), 4.0F, 1.0F);
+						Titles.sendTitle(p,
+								ChatColor.translateAlternateColorCodes('&',
+										Main.this.getConfig().getString("title.time-out")),
+								"", Integer.valueOf(0), Integer.valueOf(20), Integer.valueOf(20));
+					}
+				}, 140L);
 
-				public void run() {
-					loc.getWorld().playSound(loc, Sound.valueOf(getConfig().getString("sound.counting-down")), 4F, 1F);
-					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("msg.2-second")));
-					Titles.sendTitle(p,
-							ChatColor.translateAlternateColorCodes('&', getConfig().getString("title.2-second")), "", 0,
-							20, 0);
-				}
-
-			}, 80L);
-
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-				public void run() {
-					loc.getWorld().playSound(loc, Sound.valueOf(getConfig().getString("sound.counting-down")), 4F, 1F);
-					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("msg.1-second")));
-					Titles.sendTitle(p,
-							ChatColor.translateAlternateColorCodes('&', getConfig().getString("title.1-second")), "", 0,
-							20, 0);
-				}
-
-			}, 100L);
-
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-				public void run() {
-					loc.getWorld().playSound(loc, Sound.valueOf(getConfig().getString("sound.counting-down")), 4F, 1F);
-					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("msg.time-out")));
-					Titles.sendTitle(p,
-							ChatColor.translateAlternateColorCodes('&', getConfig().getString("title.0-second")), "", 0,
-							20, 0);
-				}
-
-			}, 120L);
-
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-				public void run() {
-					loc.getWorld().playSound(loc, Sound.valueOf(getConfig().getString("sound.time-out")), 4F, 1F);
-					Titles.sendTitle(p,
-							ChatColor.translateAlternateColorCodes('&', getConfig().getString("title.time-out")), "", 0,
-							20, 20);
-				}
-
-			}, 140L);
-
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-				public void run() {
-					p.setGameMode(GameMode.SURVIVAL);
-					p.setAllowFlight(false);
-					p.performCommand(getConfig().getString("command-respawn-location"));
-					p.sendMessage(
-							ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix")) + ChatColor
-									.translateAlternateColorCodes('&', getConfig().getString("msg.respawn-message")));
-				}
-
-			}, 160L);
+				Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+					public void run() {
+						p.setGameMode(GameMode.SURVIVAL);
+						p.setAllowFlight(false);
+						p.performCommand(Main.this.getConfig().getString("command-respawn-location"));
+						p.sendMessage(
+								ChatColor.translateAlternateColorCodes('&', Main.this.getConfig().getString("prefix"))
+										+ ChatColor.translateAlternateColorCodes('&',
+												Main.this.getConfig().getString("msg.respawn-message")));
+					}
+				}, 160L);
+			} else if (p.hasPermission("dr.respawn")) {
+				p.setGameMode(GameMode.SURVIVAL);
+				p.setAllowFlight(false);
+				p.performCommand(Main.this.getConfig().getString("command-respawn-location"));
+				p.sendMessage(ChatColor.translateAlternateColorCodes('&', Main.this.getConfig().getString("prefix"))
+						+ ChatColor.translateAlternateColorCodes('&',
+								Main.this.getConfig().getString("msg.respawn-message")));
+			}
 		}
-
 	}
 
 	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void onPlayerJoin(PlayerJoinEvent e) {
 		final Player p = e.getPlayer();
-		Location loc = p.getLocation();
+		final Location loc = p.getLocation();
+		if (((e.getPlayer() instanceof Player)) && (p.getGameMode() == GameMode.SPECTATOR)) {
+			p.setHealth(p.getMaxHealth());
+			p.setGameMode(GameMode.SURVIVAL);
+			p.setAllowFlight(false);
+			p.setFoodLevel(20);
 
-		if (e.getPlayer() instanceof Player) {
-			if (p.getGameMode() == GameMode.SPECTATOR) {
-
-				p.setHealth(20.0D);
-				p.setGameMode(GameMode.SURVIVAL);
-				p.setAllowFlight(false);
-				p.setFoodLevel(20);
-
-				double pl = econ.getBalance(p.getName());
-
-				if (getConfig().getBoolean("take-money") == true) {
-					if (pl >= 1000) {
-						r = econ.withdrawPlayer(p, 1000.0);
-						if (r.transactionSuccess()) {
-							p.setHealth(20.0D);
-							p.setFoodLevel(20);
-							p.setAllowFlight(false);
-							for (PotionEffect effect : p.getActivePotionEffects()) {
-								p.removePotionEffect(effect.getType());
-							}
-						} else {
-							p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
-									+ ChatColor.RED + ChatColor.RED
-									+ "Đã có lỗi xảy ra, không thể lấy tiền của bạn! Vui lòng báo cáo với quản trị viên");
-							loc.getWorld().playSound(loc, Sound.ITEM_SHIELD_BREAK, 4F, 1F);
-							return;
-						}
+			double money = econ.getBalance(p.getName());
+			if (getConfig().getBoolean("take-money")) {
+				if (money >= getConfig().getDouble("money-will-take")) {
+					r = econ.withdrawPlayer(p, getConfig().getDouble("money-will-take"));
+					if ((p.isOnline()) && r.transactionSuccess()) {
+						p.setHealth(p.getMaxHealth());
+						p.setFoodLevel(20);
+						p.setAllowFlight(false);
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&',
+								getConfig().getString("prefix") + ChatColor.translateAlternateColorCodes('&',
+										"&cBạn vừa thoát ra khi đang trong trạng thái hồi sinh. Tịch thu &e"
+												+ getConfig().getDouble("money-will-take") + "$&c của bạn")));
+					} else {
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
+								+ ChatColor.RED + ChatColor.RED
+								+ "Đã có lỗi xảy ra, vui lòng báo cáo với quản trị viên");
+						p.playSound(loc, Sound.ITEM_SHIELD_BREAK, 4.0F, 1.0F);
+						return;
 					}
-					if (pl <= 999) {
-						r = econ.withdrawPlayer(p, econ.getBalance(p.getName()));
-						if (p.isOnline()) {
-							if (r.transactionSuccess()) {
-								p.sendMessage(ChatColor.translateAlternateColorCodes('&',
-										getConfig().getString("prefix"))
-										+ ChatColor.translateAlternateColorCodes('&',
-												"&cBạn không đủ &e1000$&c. Bạn sẽ phải trả nợ bằng cách khác."));
-								loc.getWorld().playSound(loc, Sound.ITEM_SHIELD_BREAK, 4F, 1F);
-
-								Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-									@Override
-									public void run() {
-										p.setHealth(0.0D);
-										p.setFoodLevel(0);
-										p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20, 1),
-												true);
-										p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 1), true);
-										p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 20, 1), true);
-										p.sendMessage(ChatColor.translateAlternateColorCodes('&',
-												getConfig().getString("prefix")) + ChatColor.RED
-												+ "Bạn đã bị phạt vì tội thoát ra khi đang hồi sinh!");
-										loc.getWorld().playSound(loc, Sound.ITEM_SHIELD_BREAK, 4F, 1F);
-									}
-								}, 20L);
-							}
-						}
-
-					}
-				} else if (getConfig().getBoolean("take-money") == false) {
-					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
-							+ ChatColor.RED + "Bạn vừa thoát ra khi đang trong trạng thái hồi sinh");
-					loc.getWorld().playSound(loc, Sound.ITEM_SHIELD_BREAK, 4F, 1F);
 				}
+				if (money < getConfig().getDouble("money-will-take")) {
+					r = econ.withdrawPlayer(p, econ.getBalance(p.getName()));
+					if ((p.isOnline()) && (r.transactionSuccess())) {
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
+								+ ChatColor.translateAlternateColorCodes('&',
+										"&cBạn không đủ &e" + getConfig().getDouble("money-will-take")
+												+ "$&c. Tịch thu toàn bộ số tiền hiện có của bạn"));
+						p.playSound(loc, Sound.ITEM_SHIELD_BREAK, 4.0F, 1.0F);
+					} else {
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
+								+ ChatColor.RED + ChatColor.RED
+								+ "Đã có lỗi xảy ra, vui lòng báo cáo với quản trị viên");
+						p.playSound(loc, Sound.ITEM_SHIELD_BREAK, 4.0F, 1.0F);
+						return;
+					}
+				}
+			} else if (!getConfig().getBoolean("take-money")) {
+				p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
+						+ ChatColor.RED + "Bạn vừa thoát ra khi đang trong trạng thái hồi sinh");
+				p.playSound(loc, Sound.ITEM_SHIELD_BREAK, 4.0F, 1.0F);
 			}
 		}
 	}
@@ -313,7 +299,7 @@ public class Main extends JavaPlugin implements Listener {
 	public void onCmd(PlayerCommandPreprocessEvent e) {
 		Player p = e.getPlayer();
 		if (p.getGameMode() == GameMode.SPECTATOR) {
-			if (!(p.isOp())) {
+			if (!p.isOp()) {
 				e.setCancelled(true);
 				p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
 						+ ChatColor.RED + "Bạn không thể sử dụng lệnh vào lúc này!");
@@ -323,32 +309,30 @@ public class Main extends JavaPlugin implements Listener {
 		}
 	}
 
-	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
 		ConsoleCommandSender console = Bukkit.getConsoleSender();
-
 		if (!(sender instanceof Player)) {
-			console.sendMessage(cslprefix + ChatColor.RED + "Lenh chi co the su dung trong tro choi!");
+			console.sendMessage(this.cslprefix + ChatColor.RED + "Lenh chi co the su dung trong tro choi!");
 		} else {
 			Player p = (Player) sender;
 			Location loc = p.getLocation();
-
 			if (cmd.getName().equalsIgnoreCase("deathrespawn")) {
-				if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-					if (!(p.hasPermission("death.reload"))) {
-						loc.getWorld().playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_HURT, 4F, 1F);
+				if ((args.length == 1) && (args[0].equalsIgnoreCase("reload"))) {
+					if (!p.hasPermission("dr.reload")) {
+						p.playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_HURT, 4.0F, 1.0F);
 						p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
 								+ ChatColor.translateAlternateColorCodes('&', getConfig().getString("no-perm")));
 						return true;
 					}
 					reloadConfig();
 					saveConfig();
-					loc.getWorld().playSound(loc, Sound.BLOCK_LEVER_CLICK, 4F, 1F);
+					p.playSound(loc, Sound.BLOCK_LEVER_CLICK, 4.0F, 1.0F);
 					p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix"))
 							+ ChatColor.translateAlternateColorCodes('&', getConfig().getString("reload")));
 					return true;
-				} else if (!(args.length == 1 && args[0].equalsIgnoreCase("reload") || args.length == 1)) {
-					loc.getWorld().playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_HURT, 4F, 1F);
+				}
+				if (((args.length != 1) || (!args[0].equalsIgnoreCase("reload"))) && (args.length != 1)) {
+					p.playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_HURT, 4.0F, 1.0F);
 					p.sendMessage(
 							ChatColor.translateAlternateColorCodes('&', getConfig().getString("prefix")) + ChatColor.RED
 									+ "Không rõ yêu cầu! Nếu bạn muốn reload, vui lòng dùng lệnh /deathrespawn reload");
@@ -358,5 +342,4 @@ public class Main extends JavaPlugin implements Listener {
 		}
 		return true;
 	}
-
 }
