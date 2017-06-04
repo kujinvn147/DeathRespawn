@@ -1,48 +1,44 @@
+# Configuration version 1.2
+
 prefix: '&7[&cDeathRespawn&7] &r> '
 # Đây là prefix của plugin
 
 command-respawn-location: 'spawn'
-# Đây là command mỗi khi hồi sinh
-# Ví dụ: /spawn
+# Đây là command sẽ sử dụng mỗi khi hồi sinh, ví dụ: /spawn
+# Có thể thay đổi thành /back bằng cách chỉnh thành 'back'
 
 take-money: true
-# Nếu ở đây đặt 'true' nó sẽ lấy 1000$ của người chơi nếu như họ thoát ra khi đang hồi sinh
-# Nếu ở đây đặt 'false' nó sẽ không lấy 1000$ của người chơi nếu như họ thoát ra khi đang hồi sinh
+# Nếu ở đây đặt 'true' thì khi một người chơi thoát ra trong trạng thái hồi sinh và đăng nhập lại thì sẽ lấy số tiền bạn chỉnh
+# Nếu ở đây đặt 'false' thì khi một người chơi thoát ra trong trạng thái hồi sinh và đăng nhập lại thì sẽ không lấy bất kì số tiền nào
+
+money-will-take: 10000
+# Đây là số tiền sẽ lấy, chỉ hoạt động nếu 'take-money' đặt là 'true'
 
 reload: '&aPlugin đã được reload'
-# Thông báo mỗi khi reload
+# Đây là message thông báo mỗi khi reload plugin, config
 
 no-perm: '&cBạn không có quyền để sử dụng lệnh này!'
-# Nếu người chơi không có perm để reload
+# Đây là message thông báo nếu như người sử dụng lệnh không có permission
 
 sound:
+  # Dưới đây là một số sound
   death-sound: ENTITY_VILLAGER_HURT
-  # Nếu người chơi chết sẽ play sound này
-  
   counting-down: BLOCK_NOTE_PLING
-  # Sound đếm ngược
-  
   time-out: ENTITY_PLAYER_LEVELUP
-  # Sound hết giờ
   
 msg:
+  # Dưới đây là các message thông báo thời gian chờ
   3-second: '&aBạn sẽ được hồi sinh sau &c3 &agiây nữa!'
   2-second: '&aBạn sẽ được hồi sinh sau &c2 &agiây nữa!'
   1-second: '&aBạn sẽ được hồi sinh sau &c1 &agiây nữa!'
   time-out: '&aBạn sẽ được hồi sinh sau &c0 &agiây nữa!'
-  # Đây là thông báo đếm ngược thời gian hồi sinh
-  
   death-event: '&cBạn đã chết!'
-  # Đây là thông báo nếu bị giết
-  
   respawn-message: '&aBạn đã được hồi sinh!'
-  # Đây là thông báo nếu hồi sinh
   
 title:
+  # Dưới đây là các title thông báo thời gian chờ
   3-second: '&a&lHỒI SINH SAU &c&l3'
   2-second: '&a&lHỒI SINH SAU &c&l2'
   1-second: '&a&lHỒI SINH SAU &c&l1'
   0-second: '&a&lHỒI SINH SAU &c&l0'
-  time-out: '&5&lHẾT GIỜ'
-  # Đây là title đếm ngược thời gian hồi sinh
-  
+  time-out: '&e&lHẾT GIỜ'
