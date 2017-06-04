@@ -1,11 +1,19 @@
 name: DeathRespawn
-version: 1.0
-author: Explorer
-main: death.respawn.delay.Main
-depends: [Vault]
+main: com.deathrespawn.explorer.Main
+version: 1.2
+author: ExplorerVN
+website: http://explorervn.ml/donate.php
+depend: [Vault]
+loadbefore: [Vault]
 
 commands:
   deathrespawn:
-    description: Show display help
+    description: Show help display
     usage: /<command>
-    aliases: [dr]
+    aliases: dr
+    
+permissions:
+  dr.respawn:
+    description: Respawn permission
+  dr.reload:
+    description: Reload permission
